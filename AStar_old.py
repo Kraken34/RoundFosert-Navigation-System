@@ -7,69 +7,15 @@ import time
 import math
 import pickle
 
-# Разрешение изображения
-IMAGE_SIZE_X = 3000 # 5000
-IMAGE_SIZE_Y = 1500  # 2500
 
-# Размер бассейна
+POINT_RADIUS = 2
+
+IMAGE_SIZE_X = 5000
+IMAGE_SIZE_Y = 2500
+
 POOL_SIZE_X = 500
 POOL_SIZE_Y = 250
 
-# Если нужно уменшить окружность, то уменьшаем до MIN_RADIUS
-MIN_RADIUS = 8
-# Относительный размер точки на карте
-POINT_SIZE = 1
-# И так понятно, не трогать
-COLLISION_EPSILON = 0.00001
-
-# Цвето фона
-BACKGROUND_COLOR = '#EAE5E9'
-# Цвет линий графов
-GRAPH_LINE_COLOR = 'black'
-# Толщина линий графов
-GRATH_LINE_WIDTH = 1
-# Цвет вершин графа
-GRATH_VERTEX_COLOR = '#404BE3'
-# Радиус вершин графа
-GRATH_VERTEX_RADIUS = 1
-
-# Цвет линий пути
-PATH_LINE_COLOR = '#FF4E4E'
-# Толщина линий пути
-PATH_LINE_WIDTH = 8
-
-# Цвет просмотренных вершин графа
-GRATH_VIEWED_VERTEX_COLOR = '#E3404B'
-# Радиус просмотренных вершин графа
-GRATH_VIEWED_VERTEX_RADIUS = 1.4
-# Цвет удаленной окружности
-DIED_CIRCLE_COLOR = '#D2CED1'
-# Цвет границ удаленной окружности
-DIED_CIRCLE_BORDER_COLOR = BACKGROUND_COLOR
-# Цвет окружностей
-CIRCLES_COLOR = '#29272D'
-# цвет границ окружностей
-CIRCLES_BORDER_COLOR = BACKGROUND_COLOR
-# Толщина границ окружностей
-CIRCLES_BORDER_WIDTH = 1
-
-
-# Цвет начальной точки
-START_POINT_COLOR = '#E3D840'
-# Размер начальной точки
-START_POINT_RADIUS = 3
-# Цвет конечной точки
-END_POINT_COLOR = '#E3D840'
-# Размер конечной точки
-END_POINT_RADIUS = 3
-
-
-# Цвет уменьшенной окружности
-VOID_CIRCLE_COLOR = '#D2CED1'
-# Цвет границ уменьшенной окружности
-VOID_CIRCLE_BORDER_COLOR = BACKGROUND_COLOR
-# Цвет границ вершин графа
-GRATH_VERTEX_BORDER_COLOR = BACKGROUND_COLOR
 
 class Circle:
     
@@ -82,25 +28,6 @@ class Circle:
         self.antinodes = []
         self.saw = False
 
-
-class Line:
-
-    def __init__(self, x1, y1, x2, y2) :
-        self.x1 = x1
-        self.y1 = y1
-        self.x2 = x2
-        self.y2 = y2
-
-class Arcc:
-
-    def __init__(self, centerX, centerY, r, dr, p1, p2, isInvert) :
-        self.centerX = centerX
-        self.centerY = centerY
-        self.r = r
-        self.dr = dr
-        self.p1 = p1
-        self.p2 = p2
-        self.isInvert = isInvert
 
 class Node:
 
@@ -144,7 +71,7 @@ class AStar:
         draw.ellipse((x - r, IMAGE_SIZE_Y - y - r, x + r, IMAGE_SIZE_Y - y + r), color, outline, width)
 
     @staticmethod
-    def drawArc(draw, x, y, r, start, end, color, width=1):
+    def drawArc(draw, x, y, r, start, end, color, width=0):
         if (draw == None): return
         # return
         x = x * IMAGE_SIZE_X / POOL_SIZE_X
@@ -183,7 +110,7 @@ class AStar:
             if i in circleIndexes : continue
             circle = circles[i]
             
-            #print('circle\'s i x y:', i, circle.x, circle.y, circle.r)
+            #print('circle.x-y:', circle.x, circle.y)
             v1x = x2-x1
             v1y = y2-y1
 
@@ -192,7 +119,7 @@ class AStar:
 
             if (v1x**2 + v1y**2) == 0 :
                 #AStar.drawCircle(draw, x1, y1, 2, 'orange')
-                if ((x1-circle.x)**2 + (y1-circle.y)**2)**0.5 < circle.r - COLLISION_EPSILON : return False
+                if ((x1-circle.x)**2 + (y1-circle.y)**2)**0.5 < circle.r : return False
                 #else : return True
                 else : continue
                 
@@ -206,9 +133,9 @@ class AStar:
 
             #print('u, x, y:', u, x, y)
 
-            if ((circle.x - x)**2 + (circle.y - y)**2)**0.5 < circle.r - COLLISION_EPSILON  : return False
+            if ((circle.x - x)**2 + (circle.y - y)**2)**0.5 < circle.r : return False
 
-        AStar.drawLine(draw, x1, y1, x2, y2, GRAPH_LINE_COLOR, GRATH_LINE_WIDTH)
+        AStar.drawLine(draw, x1, y1, x2, y2)
         
         return True
 
@@ -239,7 +166,7 @@ class AStar:
         return ((node.x-circle.x)**2 + (node.y-circle.y)**2)**0.5 <= circle.r
     
     @staticmethod
-    def findNeighborsFromPoint(circles, node, draw, points, n=False, n2=False):
+    def findNeighborsFromPoint(circles, node, draw, n=False, n2=False):
 
         neighbors = []
         x = node.x
@@ -258,7 +185,7 @@ class AStar:
             #if circle.r <= 0 : continue
 
 
-            if ((circle.x-x)**2 + (circle.y-y)**2)**0.5 <= circle.r : continue
+            if ((circle.x-x)**2 + (circle.y-y)**2)**0.5 < circle.r : return []
 
             x2 = (x + circle.x)/2
             y2 = (y + circle.y)/2
@@ -279,11 +206,7 @@ class AStar:
 
             #print('I = ', i)
 
-            circleIndexes = [i]
-            #if node.circleIndex != None and node.circleIndex != -1 :
-                #circleIndexes.append(node.circleIndex)
-
-            if AStar.checkLine(circles, x4, y4, x, y, circleIndexes, draw):
+            if AStar.checkLine(circles, x4, y4, x, y, [i], draw):
                 node1 = Node(x4, y4, i, AStar.getPolarAngle2(x4, y4, circle))
                 #print('AAAAAAAA:', x4, y4, circle.x, circle.y, i, AStar.getPolarAngle(x4, y4, circle.x, circle.y))
                 node1.pathLenght = ((x-x4)**2 + (y-y4)**2)**0.5
@@ -291,7 +214,7 @@ class AStar:
                 neighbors.append(node1)
                 if n2 : circle.nodes.append(node1)
 
-            if AStar.checkLine(circles, x5, y5, x, y, circleIndexes, draw):
+            if AStar.checkLine(circles, x5, y5, x, y, [i], draw):
                 node2 = Node(x5, y5, i, AStar.getPolarAngle2(x5, y5, circle))
                 #print('AAAAAAAA:', x5, y5, i, AStar.getPolarAngle2(x5, y5, circle))
                 node2.pathLenght = ((x-x5)**2 + (y-y5)**2)**0.5
@@ -299,11 +222,6 @@ class AStar:
                 neighbors.append(node2)
                 if n2 : circle.nodes.append(node2)
         #print(len(neighbors))
-
-        for p in points :
-            if AStar.checkLine(circles, p.x, p.y, x, y, [], draw):
-                neighbors.append(p)
-
         return neighbors
 
     @staticmethod
@@ -341,9 +259,7 @@ class AStar:
         
     @staticmethod
     def findNeighborsForCircle(circles, circleIndex, draw):
-
-        if circleIndex == None : return []
-
+        
         circle = circles[circleIndex]
         neighbors = []
         
@@ -354,12 +270,9 @@ class AStar:
             return n
 
         for i in range(len(circles)) :
-            c = circles[i]
-
             if i == circleIndex or circles[i].saw : continue
-            if circle.x == c.x and circle.y == c.y: continue
-
-            #print(circleIndex, i)
+            
+            c = circles[i]
 
             a1 = (circle.r + c.r) / ((circle.x-c.x)**2 + (circle.y-c.y)**2)**0.5
             if -1 <= a1 <= 1 :
@@ -395,8 +308,8 @@ class AStar:
                     circle.nodes.append(node1)
                     c.nodes.append(node3)
 
-                    AStar.drawCircle(draw, x1, y1, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
-                    AStar.drawCircle(draw, x3, y3, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
+                    AStar.drawCircle(draw, x1, y1, 1, 'blue', 'black', 1)
+                    AStar.drawCircle(draw, x3, y3, 1, 'blue', 'black', 1)
 
                 if AStar.checkLine(circles, x2, y2, x4, y4, [i, circleIndex], draw):
                     node2 = Node(x2, y2, circleIndex, AStar.getPolarAngle2(x2, y2, circle))
@@ -413,8 +326,8 @@ class AStar:
                     circle.nodes.append(node2)
                     c.nodes.append(node4)
 
-                    AStar.drawCircle(draw, x2, y2, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
-                    AStar.drawCircle(draw, x4, y4, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
+                    AStar.drawCircle(draw, x2, y2, 1, 'blue', 'black', 1)
+                    AStar.drawCircle(draw, x4, y4, 1, 'blue', 'black', 1)
 
             
             a2 = (circle.r - c.r) / ((circle.x-c.x)**2 + (circle.y-c.y)**2)**0.5
@@ -463,8 +376,8 @@ class AStar:
                     circle.nodes.append(node5)
                     c.nodes.append(node7)
 
-                    AStar.drawCircle(draw, x5, y5, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
-                    AStar.drawCircle(draw, x7, y7, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
+                    AStar.drawCircle(draw, x5, y5, 1, 'blue', 'black', 1)
+                    AStar.drawCircle(draw, x7, y7, 1, 'blue', 'black', 1)
 
                 if AStar.checkLine(circles, x6, y6, x8, y8, [i, circleIndex], draw):
                     node6 = Node(x6, y6, circleIndex, AStar.getPolarAngle2(x6, y6, circle))
@@ -481,8 +394,8 @@ class AStar:
                     circle.nodes.append(node6)
                     c.nodes.append(node8)
 
-                    AStar.drawCircle(draw, x6, y6, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
-                    AStar.drawCircle(draw, x8, y8, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
+                    AStar.drawCircle(draw, x6, y6, 1, 'blue', 'black', 1)
+                    AStar.drawCircle(draw, x8, y8, 1, 'blue', 'black', 1)
 
         for c in circles :
             #if c.saw : continue
@@ -498,20 +411,16 @@ class AStar:
         #return circle.nodes
 
     @staticmethod
-    def findNeighbors(circles, node, draw, points, isStartPoint=False):
+    def findNeighbors(circles, node, draw):
         #print('\nfindNeighbors')
         #if node.path == None :
             #print('from:', node.circleIndex, node.x, node.y, 'None')
         #else :
             #print('from:', node.circleIndex, node.x, node.y, node.path.circleIndex)
         #input()
-        if isStartPoint :
-            return [AStar.findNeighborsFromPoint(circles, node, draw, points, False, True), AStar.findNeighborsForCircle(circles, node.circleIndex, draw)]
 
-
-        if node.circleIndex == None or node.circleIndex == -1 : return [AStar.findNeighborsFromPoint(circles, node, draw, points, False, True), []]
-
-        return [[], AStar.findNeighborsForCircle(circles, node.circleIndex, draw)]
+        if node.circleIndex == None or node.circleIndex == -1 : return AStar.findNeighborsFromPoint(circles, node, draw, False, True)
+        return AStar.findNeighborsForCircle(circles, node.circleIndex, draw)
 
     @staticmethod
     def hordD(circles, node1, node2):
@@ -592,13 +501,9 @@ class AStar:
         v1y = node1.y-node2.y
 
         return (v1x**2 + v1y**2)**0.5
-
+    
     @staticmethod
-    def PointToPointDistance(x1, y1, x2, y2):
-        return ((x1-x2)**2 + (y1-y2)**2)**0.5
-
-    @staticmethod
-    def start_path(circles, open_set, current_node, end, draw, dr, isStartPoint=False):
+    def start_path(circles, open_set, current_node, end, draw):
         #print('\nstart_path')
 
         best_way = 0
@@ -608,257 +513,172 @@ class AStar:
         current_node = open_set[best_way]
         final_path = []
 
-        # print('\nopenset len:', len(open_set))
-        # for neighbor in open_set:
-        #     print('\nnode.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
-        #     print('ADR =', neighbor)
-        #     print('neighbor.path =', neighbor.path)
-        #     print('PREV =', neighbor.previous)
-        #     print('G =', neighbor.g)
-        #     print('H =', neighbor.h)
-        #     print('F =', neighbor.f)
-        #
-        # print('\nCurrent_node.circleIndex =', current_node.circleIndex, ' x, y:', current_node.x, current_node.y)
-        # print('ADR =', current_node)
-        # print('PREV =', current_node.previous)
-        # print('G =', current_node.g)
-        # print('H =', current_node.h)
-        # print('F =', current_node.f)
+        #print('\nopenset len:', len(open_set))
+        #for neighbor in open_set:
+        #    print('\nnode.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
+        #    print('ADR =', neighbor)
+        #    print('neighbor.path =', neighbor.path)
+        #    print('PREV =', neighbor.previous)
+        #    print('G =', neighbor.g)
+        #    print('H =', neighbor.h)
+        #    print('F =', neighbor.f)
+
+        #print('\nCurrent_node.circleIndex =', current_node.circleIndex, ' x, y:', current_node.x, current_node.y)
+        #print('ADR =', current_node)
+        #print('PREV =', current_node.previous)
+        #print('G =', current_node.g)
+        #print('H =', current_node.h)
+        #print('F =', current_node.f)
 
         if current_node.circleIndex == -1: # == end
             temp = current_node
             q = 0
-            path = []
             while temp.previous:
-
-                if (temp.circleIndex != temp.previous.circleIndex) : #It's a line
-                    path.append(Line(temp.previous.x, temp.previous.y, temp.x, temp.y))
-
-                if (temp.circleIndex == temp.previous.circleIndex) : #It's a arcc
-
-                    angle1 = AStar.getPolarAngle2(temp.previous.x, temp.previous.y, circles[temp.circleIndex])
-                    angle2 = AStar.getPolarAngle2(temp.x, temp.y, circles[temp.circleIndex])
-
-                    v1x = circles[temp.circleIndex].x - temp.x
-                    v1y = circles[temp.circleIndex].y - temp.y
-                    v2x = circles[temp.circleIndex].x - temp.previous.x
-                    v2y = circles[temp.circleIndex].y - temp.previous.y
-
-                    vecMul = v1x*v2y - v2x*v1y
-                    isInvert = vecMul > 0
-
-                    path.append(Arcc(circles[temp.circleIndex].x,
-                                     circles[temp.circleIndex].y,
-                                     circles[temp.circleIndex].r,
-                                     dr,
-                                     angle1,
-                                     angle2,
-                                     isInvert))
-
+                final_path.append(temp.previous)
+                        
+                AStar.drawCircle(draw, temp.x, temp.y, 1, 'yellow', 'black', 1)
+                c = temp
                 temp = temp.previous
+                if q % 2 == 0 : AStar.drawLine(draw, c.x, c.y, temp.x, temp.y, 'green', 7)
+                else :
+                    angle1 = 360 - AStar.getPolarAngle(circles[c.circleIndex].x, circles[c.circleIndex].y, c.x, c.y)
+                    angle2 = 360 - AStar.getPolarAngle(circles[c.circleIndex].x, circles[c.circleIndex].y, temp.x, temp.y)
 
-            path.reverse()
-
-            for object in path :
-                if isinstance(object, Line):
-                    #print(object.x1, object.y1, object.x2, object.y2)
-                    AStar.drawLine(draw, object.x1, object.y1, object.x2, object.y2, PATH_LINE_COLOR, PATH_LINE_WIDTH)
-                if isinstance(object, Arcc):
-                    angle1 = 360 - object.p2
-                    angle2 = 360 - object.p1
-                    if object.isInvert :
-                        angle1, angle2 = angle2, angle1
-
-                    AStar.drawArc(draw, object.centerX, object.centerY, object.r, angle1, angle2, PATH_LINE_COLOR, PATH_LINE_WIDTH)
-
-
-            return open_set, current_node, path
+                    if angle2 < angle1 :
+                        angle2, angle1 = angle1, angle2
+                    
+                    AStar.drawArc(draw, circles[c.circleIndex].x, circles[c.circleIndex].y, circles[c.circleIndex].r, angle1, angle2, 'green', 7)
+                    
+                    
+                q += 1
+            return open_set, current_node, final_path
 
         open_set = AStar.clean_open_set(open_set, current_node)
         current_node.saw = True
 
         
-        neighborsLine, neighborsCircle = AStar.findNeighbors(circles, current_node, draw, [end], isStartPoint)
-        #if isStartPoint :
-            #print(len(neighbors))
-            #for i in neighbors :
-                #print(i.x, i.y)
-                #AStar.drawCircle(draw, i.x, i.y, POINT_SIZE * 1.2, 'red', 'black', 1)
-        #print(neighbors)
+        neighbors = AStar.findNeighbors(circles, current_node, draw)
         #AStar.drawCircle(draw, current_node.x, current_node.y, 5.5, 'pink', 'black', 1)
-        AStar.drawCircle(draw, current_node.x, current_node.y,
-                         GRATH_VIEWED_VERTEX_RADIUS, GRATH_VIEWED_VERTEX_COLOR, GRATH_VERTEX_BORDER_COLOR, 1)
+        AStar.drawCircle(draw, current_node.x, current_node.y, 1.5, 'red', 'black', 1)
 
         #print('\nneighbors len:', len(neighbors))
         #for neighbor in neighbors:
-            #print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
-            #print('ADR =', neighbor)
-            #print('neighbor.path =', neighbor.path)
-            #print('PREV =', neighbor.previous)
-            #print('SAW =', neighbor.saw)
-            #print('G =', neighbor.g)
-            #print('H =', neighbor.h)
-            #print('F =', neighbor.f)
+        #    print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
+        #    print('ADR =', neighbor)
+        #    print('neighbor.path =', neighbor.path)
+        #    print('PREV =', neighbor.previous)
+        #    print('SAW =', neighbor.saw)
+        #    print('G =', neighbor.g)
+        #    print('H =', neighbor.h)
+        #    print('F =', neighbor.f)
+        
+        for neighbor in neighbors:
 
-        for neighbor in neighborsLine :
+            if current_node.circleIndex == None :
+                if neighbor.saw == True : continue
+                else:
+                    temp_g = current_node.g + AStar.lineD(current_node, neighbor)
+                    neighbor.g = temp_g
+                    neighbor.h = AStar.lineD(neighbor, end)
+                    neighbor.f = neighbor.g + neighbor.h
+                    neighbor.previous = current_node
 
-            if neighbor.saw == True: continue
-            temp_g = current_node.g + AStar.lineD(current_node, neighbor)
-            neighbor.g = temp_g
-            neighbor.h = AStar.lineD(neighbor, end)
-            neighbor.f = neighbor.g + neighbor.h
-            neighbor.previous = current_node
+                    if neighbor not in open_set :
+                        open_set.append(neighbor)
+            else :
 
-            if neighbor not in open_set:
-                open_set.append(neighbor)
+                if neighbor.saw == True : continue
+                else:
+                    if neighbor.path == None : continue
+                    temp_g = current_node.g + AStar.hordD(circles, current_node, neighbor)[0]
 
-        for neighbor in neighborsCircle:
+                    #if AStar.hordD(circles, current_node, neighbor)[1] == -1 :
+                    #    print('\nCurrent_node.circleIndex =', current_node.circleIndex, ' x, y:', current_node.x, current_node.y)
+                    #    print('ADR =', current_node)
+                    #    print('PREV =', current_node.previous)
+                    #    print('G =', current_node.g)
+                    #    print('H =', current_node.h)
+                    #    print('F =', current_node.f)
+                    #    
+                    #    print('\nneighbors len:', len(neighbors))
+                    #    for neighbor in neighbors:
+                    #        print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
+                    #        print('ADR =', neighbor)
+                    #        print('neighbor.path =', neighbor.path)
+                    #        print('PREV =', neighbor.previous)
+                    #        print('SAW =', neighbor.saw)
+                    #        print('G =', neighbor.g)
+                    #        print('H =', neighbor.h)
+                    #        print('F =', neighbor.f)
+                    
+                    if neighbor.g < temp_g and neighbor.g != 0 : continue
+                    
+                    neighbor.g = temp_g
+                    neighbor.h = AStar.lineD(neighbor, neighbor.path) + AStar.lineD(neighbor.path, end)
+                    neighbor.f = neighbor.g + neighbor.h
+                    neighbor.previous = current_node
 
-            if neighbor.saw == True: continue
-            if neighbor.path == None: continue
+                    #if neighbor.path not in open_set and ((neighbor.path.g > neighbor.g + AStar.lineD(neighbor, neighbor.path) or neighbor.path.g == 0)) :
+                    if (neighbor.path.g > neighbor.g + AStar.lineD(neighbor, neighbor.path) or neighbor.path.g == 0) :
+                        
+                        neighbor.path.previous = neighbor
+                        neighbor.path.g = neighbor.g + AStar.lineD(neighbor, neighbor.path)
+                        neighbor.path.h = AStar.lineD(neighbor.path, end)
+                        neighbor.path.f = neighbor.path.g + neighbor.path.h
+                        
+                        open_set.append(neighbor.path)
 
-            temp_g = current_node.g + AStar.hordD(circles, current_node, neighbor)[0]
-            if neighbor.g < temp_g and neighbor.g != 0: continue
-
-            neighbor.g = temp_g
-            neighbor.h = AStar.lineD(neighbor, neighbor.path) + AStar.lineD(neighbor.path, end)
-            neighbor.f = neighbor.g + neighbor.h
-            neighbor.previous = current_node
-
-            if (neighbor.path.g > neighbor.g + AStar.lineD(neighbor, neighbor.path) or neighbor.path.g == 0):
-                neighbor.path.previous = neighbor
-                neighbor.path.g = neighbor.g + AStar.lineD(neighbor, neighbor.path)
-                neighbor.path.h = AStar.lineD(neighbor.path, end)
-                neighbor.path.f = neighbor.path.g + neighbor.path.h
-
-                open_set.append(neighbor.path)
-
-        # print('\nneighbors len:', len(neighborsLine))
-        # for neighbor in neighborsLine:
-        #     print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
-        #     print('ADR =', neighbor)
-        #     print('neighbor.path =', neighbor.path)
-        #     print('PREV =', neighbor.previous)
-        #     print('SAW =', neighbor.saw)
-        #     print('G =', neighbor.g)
-        #     print('H =', neighbor.h)
-        #     print('F =', neighbor.f)
-        #
-        # print('\nneighbors len:', len(neighborsCircle))
-        # for neighbor in neighborsCircle:
-        #     print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
-        #     print('ADR =', neighbor)
-        #     print('neighbor.path =', neighbor.path)
-        #     print('PREV =', neighbor.previous)
-        #     print('SAW =', neighbor.saw)
-        #     print('G =', neighbor.g)
-        #     print('H =', neighbor.h)
+        #print('\nneighbors len:', len(neighbors))
+        #for neighbor in neighbors:
+        #    print('\nneighbor.circleIndex =', neighbor.circleIndex, ' x, y:', neighbor.x, neighbor.y)
+        #    print('ADR =', neighbor)
+        #    print('neighbor.path =', neighbor.path)
+        #    print('PREV =', neighbor.previous)
+        #    print('SAW =', neighbor.saw)
+        #    print('G =', neighbor.g)
+        #    print('H =', neighbor.h)
         #    print('F =', neighbor.f)
 
         return open_set, current_node, final_path
 
-    def main(self, start, end, circles_, needToDraw, needToDrawAllLines):
+    def main(self, start, end, circles, needToDrive, needToDrawAllLines):
 
         self.start = start
         self.end = end
         self.circles = []
 
         im, draw = None, None
-        if needToDraw:
-            im = Image.new('RGB', (IMAGE_SIZE_X, IMAGE_SIZE_Y), BACKGROUND_COLOR)
+        if needToDrive:
+            im = Image.new('RGB', (IMAGE_SIZE_X, IMAGE_SIZE_Y), (0, 0, 0))
             draw = ImageDraw.Draw(im)
 
         endNode = Node(end[0], end[1], 0, 0)
-        startNode_ = Node(start[0], start[1], 0, 0)
-        startNone = None
-
-        endNode = Node(end[0], end[1], -1, 0)
-
-        circles = []
-        max_deep = 0
-        maxDeepIndex = len(circles_)
-        for i in range(len(circles_)) :
-            circle_ = circles_[i]
-
-            distanceToCenter = AStar.PointToPointDistance(startNode_.x, startNode_.y, circles_[i][0], circles_[i][1])
-            distanceToCenterEnd = AStar.PointToPointDistance(endNode.x, endNode.y, circles_[i][0], circles_[i][1])
-
-            if circles_[i][2] <= 0 : continue
-            if distanceToCenter <= MIN_RADIUS:
-                #print(AStar.PointToPointDistance(10, 50, 10, circles_[i][1]))
-                #print(distanceToCenter, circle_[0], circle_[1], circle_[2], startNode_.x, startNode_.y)
-                AStar.drawCircle(draw, circle_[0], circle_[1], circle_[2], DIED_CIRCLE_COLOR, DIED_CIRCLE_COLOR, 1)
-                continue
-            if distanceToCenterEnd <= MIN_RADIUS:
-                AStar.drawCircle(draw, circle_[0], circle_[1], circle_[2], DIED_CIRCLE_COLOR, DIED_CIRCLE_COLOR, 1)
-                continue
-
-            circles.append([circles_[i][0], circles_[i][1], circles_[i][2]])
-
-            deep = circles_[i][2] - distanceToCenter
-            if deep > max_deep :
-                max_deep = deep
-                maxDeepIndex = len(circles)-1
-
-        #print('max_deep: ', max_deep, maxDeepIndex)
-        for i in range(len(circles)) :
-            circle = circles[i]
-
-            if AStar.isPointInsideCircle(endNode, Circle(circle[0], circle[1], circle[2])) :
-                AStar.drawCircle(draw, circle[0], circle[1], circle[2], VOID_CIRCLE_COLOR , VOID_CIRCLE_BORDER_COLOR, 1)
-                circle[2] = MIN_RADIUS
-                #continue
-
-            if AStar.isPointInsideCircle(startNode_, Circle(circle[0], circle[1], circle[2])) :
-
-                AStar.drawCircle(draw, circle[0], circle[1], circle[2], VOID_CIRCLE_COLOR , VOID_CIRCLE_BORDER_COLOR, 1)
-
-                if i == maxDeepIndex :
-                    #print('circle parametrs: ', max_deep, i, maxDeepIndex, circle[2])
-                    circle[2] = circle[2] - max_deep
-                    #print('new radius:', circle[2])
-                    startNone = maxDeepIndex
-                else :
-
-                    circle[2] = MIN_RADIUS
-
-            self.circles.append(Circle(circle[0], circle[1], circle[2]))
-            #print('Add a circle: ', circle[0], circle[1], circle[2])
+        startNode = Node(start[0], start[1], 0, 0)
+        for circle in circles :
+            if circle[2] > 0 : # circle.r
+                if AStar.isPointInsideCircle(endNode, Circle(circle[0], circle[1], circle[2])) or  \
+                   AStar.isPointInsideCircle(startNode, Circle(circle[0], circle[1], circle[2]))  :
+                    #AStar.drawCircle(draw, circle.x, circle.y, circle.r, '#202020', 'black', 1)
+                    AStar.drawCircle(draw, circle[0], circle[1], circle[2], '#202020', 'black', 1)
+                    continue
+                self.circles.append(Circle(circle[0], circle[1], circle[2]))
 
         for circle in self.circles :
-            #print(circle.x, circle.y, circle.r)
-            AStar.drawCircle(draw, circle.x, circle.y, circle.r, CIRCLES_COLOR, CIRCLES_BORDER_COLOR, CIRCLES_BORDER_WIDTH)
+            AStar.drawCircle(draw, circle.x, circle.y, circle.r, 'white', 'black', 1)
+            
+        AStar.drawCircle(draw, start[0], start[1], POINT_RADIUS, '#618ab2')
+        AStar.drawCircle(draw, end[0], end[1], POINT_RADIUS, '#618ab2')
 
-        if startNone == None :
-            AStar.drawCircle(draw, start[0], start[1], START_POINT_RADIUS, START_POINT_COLOR)
-            AStar.drawCircle(draw, end[0], end[1], END_POINT_RADIUS, END_POINT_COLOR)
+        startNode = Node(start[0], start[1], None, 0)
+        endNode = Node(end[0], end[1], -1, 0)
+        n1 = AStar.findNeighborsFromPoint(self.circles, startNode, draw)
+        n2 = AStar.findNeighborsFromPoint(self.circles, endNode, draw, True, True)
 
-            startNode = Node(start[0], start[1], None, 0)
+        #if not n1 : return 2, [], None
+        #if not n2 : return 1, [], None
 
-            n1 = AStar.findNeighborsFromPoint(self.circles, startNode, draw, [endNode])
-            n2 = AStar.findNeighborsFromPoint(self.circles, endNode, draw, [], True, True)
-
-            for i in n1 : AStar.drawCircle(draw, i.x, i.y, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR,
-                                           GRATH_VERTEX_BORDER_COLOR, 1)
-            for i in n2 : AStar.drawCircle(draw, i.x, i.y, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR,
-                                           GRATH_VERTEX_BORDER_COLOR, 1)
-
-        else :
-            #print("AAA")
-            angle = AStar.getPolarAngle2(start[0], start[1], self.circles[maxDeepIndex])
-            startNode = Node(start[0], start[1], maxDeepIndex, angle)
-            self.circles[maxDeepIndex].nodes.append(startNode)
-
-            AStar.drawCircle(draw, start[0], start[1], START_POINT_RADIUS, START_POINT_COLOR)
-            AStar.drawCircle(draw, end[0], end[1], END_POINT_RADIUS, END_POINT_COLOR)
-
-            n1 = AStar.findNeighborsFromPoint(self.circles, startNode, draw, [endNode])
-            n2 = AStar.findNeighborsFromPoint(self.circles, endNode, draw, [], True, True)
-
-            for i in n1: AStar.drawCircle(draw, i.x, i.y, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR,
-                                          GRATH_VERTEX_BORDER_COLOR, 1)
-            for i in n2: AStar.drawCircle(draw, i.x, i.y, GRATH_VERTEX_RADIUS, GRATH_VERTEX_COLOR,
-                                          GRATH_VERTEX_BORDER_COLOR, 1)
+        for i in n1 : AStar.drawCircle(draw, i.x, i.y, 1, 'blue')
+        for i in n2 : AStar.drawCircle(draw, i.x, i.y, 1, 'blue')
 
         if needToDrawAllLines :
             for i in range(len(self.circles)) : AStar.findNeighborsForCircle(self.circles, i, draw)
@@ -872,13 +692,11 @@ class AStar:
         self.end = endNode
 
         #im.show()
-        if (maxDeepIndex < len(circles)) :
-            #print(maxDeepIndex, len(circles))
-            open_set, current_node, final_path = AStar.start_path(self.circles, open_set, current_node, endNode, draw, max_deep,True)
+        
         while len(open_set) > 0:
-            open_set, current_node, final_path = AStar.start_path(self.circles, open_set, current_node, endNode, draw, max_deep)
+            open_set, current_node, final_path = AStar.start_path(self.circles, open_set, current_node, endNode, draw)
             if len(final_path) > 0: break
-        #AStar.drawCircle(draw, startNode.x, startNode.y, 1, 'yellow', 'black', 1)
+        AStar.drawCircle(draw, startNode.x, startNode.y, 1, 'yellow', 'black', 1)
 
         return final_path, im
 
@@ -888,16 +706,13 @@ if __name__ == "__main__":
 
     a_star = AStar()
 
-    #startPoint = [50, 50]
-    #endPoint = [450, 210]
-    startPoint = [random.randint(0, 499), random.randint(0, 249)]
-    endPoint  = [random.randint(0, 499), random.randint(0, 249)]
+    startPoint = [10, 10]
+    endPoint = [490, 249]
 
 
     circles = []
     for i in range(60) :
         circles.append([random.randint(0, 499), random.randint(0, 249), random.randint(1, 40)])
-    print(circles)
 
     time1 = time.time()
     final_path, im = a_star.main(startPoint, endPoint, circles, False, False)
