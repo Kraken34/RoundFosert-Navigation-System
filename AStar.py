@@ -7,9 +7,6 @@ import time
 import math
 import pickle
 
-
-POINT_RADIUS = 2
-
 # Разрешение изображения
 IMAGE_SIZE_X = 3000 # 5000
 IMAGE_SIZE_Y = 1500  # 2500
